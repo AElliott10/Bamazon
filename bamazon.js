@@ -1,6 +1,7 @@
 //Connect the database
 var mysql = require("mysql");
 var inquirer = require("inquirer");
+var Table = require("cli-table");
 
 var connection = mysql.createConnection({
   host: "localhost",
@@ -26,19 +27,29 @@ connection.connect(function (err) {
 
 //Customer Experience - first sees all items for sale and following details: item_id, product_name, price, stock_quantity
 function itemsForSale() {
-  connection.query("SELECT item_id, product_name, price, stock_quantity FROM products", function (err, results, fields) {
+  var query = "SELECT * FROM products";
+  connection.query(query, function (err, results) {
     if (err) throw err;
-    console.log(results);
-    orderQuestions();
+    var displayTable = new Table({
+      head: ["Item ID", "Product Name", "Price", "Quantity"],
+      colWidths: [10, 25, 10, 10]
+    });
+    for (var i = 0; i < results.length; i++) {
+      displayTable.push(
+        [results[i].item_id, results[i].product_name, results[i].price, results[i].stock_quantity]
+      );
+    }
+    console.log(displayTable.toString());
+    orderQuestions(results);
   });
 }
 
-function orderQuestions() {
+function orderQuestions(answer) {
   connection.query("SELECT * FROM products", function (err, results) {
     if (err) throw err;
     inquirer.prompt([
       {
-        name: "item_id",
+        name: "choice",
         type: "input",
         message: "Please provide the ID of the product you would like to purchase."
       },
@@ -48,49 +59,25 @@ function orderQuestions() {
         message: "How many items would you like to purchase?"
       },
     ])
-      // determine if enough stock
-
+      // Manage Inventory
       .then(function (answer) {
-        var chosenItem;
-        for (var i = 0; i < results.length; i++) {
-          if (results[i].item_id === answer.choice) {
-            chosenItem = results[i];
-          }
-        }
-
-        if (chosenItem.stock_quantity < parseInt(answer.stock_quantity)) {
-          // stock is sufficient, decrease inventory amount by the amount requested.
-          connection.query(
-            "UPDATE products SET ? WHERE ?",
-            [
-              {
-                stock_quantity: answer.quantity
-              },
-
-              {
-                item_id: chosenItem.id
-              }
-            ],
-            function (error) {
-              if (error) throw err;
-              console.log("Purchase complete!");
-              itemsForSale();
-            }
-          );
-        }
-        else {
-          // else send message "Insufficent quantity
-          console.log("Insufficent quantity, please pick another item.");
-          itemsForSale();
-        }
+        var stockRequested = answer.stock_quantity;
+        var itemID = answer.choice;
+        managePurchase();
       });
   });
+
+  function managePurchase() {
+    var total = 0;
+    connection.query(
+      "UPDATE products SET stock_quantity = stock_quantity - ? WHERE item_id = ?",
+      [answer.stock_quantity, answer.choice],
+      function (error) {
+        if (error) throw err;
+        // Calculate Total
+        total = total + (answer.stock_quantity * results.price);
+        console.log("Purchase complete! Total purchase price: " + total);
+      }
+    );
+  }
 }
-/*App prompts user with two messages
-Message one - Please provide the ID of the product you would like to purchase.
-Message two - How many items would you like to purchase?*/
-
-
-
-
-
