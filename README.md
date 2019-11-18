@@ -19,7 +19,7 @@ Bamazon is a amazon like app that leverages MySQL and node to allow the customer
 ----
 
 ## Link to screenshots
-![image](https://github.com/2019-11-18.png)
+![image](https://github.com/AElliott10/Bamazon/blob/master/2019-11-18.png)
 
 ----
 
