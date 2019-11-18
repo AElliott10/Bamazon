@@ -22,6 +22,7 @@ connection.connect(function (err) {
   if (err) throw err;
   console.log("connected as id " + connection.threadId);
   itemsForSale();
+  //connection.end();
 });
 
 //Customer Experience - first sees all items for sale and following details: item_id, product_name, price, stock_quantity
@@ -43,12 +44,12 @@ function itemsForSale() {
   });
 }
 
-function orderQuestions(answers) {
+function orderQuestions(answer) {
   connection.query("SELECT * FROM products", function (err, results) {
     if (err) throw err;
     inquirer.prompt([
       {
-        name: "item_ID",
+        name: "choice",
         type: "input",
         message: "Please provide the ID of the product you would like to purchase."
       },
@@ -58,29 +59,57 @@ function orderQuestions(answers) {
         message: "How many items would you like to purchase?",
       },
     ])
-      .then(function (answers) {
-        var stockRequested = answers.stock_quantity;
-        var itemID = answers.item_ID;
-        managePurchase(itemID, stockRequested);
-      })
+      // Check Inventory
+      .then(function (answer) {
+        
+        for (var i = 0; i < results.length; i++) {
+          if (results[i].stock_quantity > answer.stock_quantity) {
+            connection.query(
+              "UPDATE products SET stock_quantity = stock_quantity - ? WHERE item_id = ?",
+              [answer.stock_quantity, answer.choice],
+              function (error) {
+                if (error) throw err;
+           }
+            )
+          }
+          else {
+            console.log("Sorry not enough in stock. Please pick another item.");
+          }
+        }
+      });
   }
   )
 }
 
 //managePurchase
-function managePurchase(itemID, stockRequested) {
-  connection.query("SELECT * FROM products WHERE item_id = " + itemID, function (err, results) {
-    if (err) { console.log(err) };
-    //console.log(results)
-    if (stockRequested <= results[0].stock_quantity) {
-      var totalPurchase = results[0].price * stockRequested;
-      console.log("Thank you for your order. Your total cost is " + totalPurchase + ".");
-      var oldTotal = results[0].stock_quantity
-      var newTotal = oldTotal - stockRequested
-      connection.query("UPDATE products SET stock_quantity = " + newTotal + " WHERE item_id = " + itemID);
-    } else {
-      console.log("Apologies, we ran out of stock. Please pick another item.");
+/*function managePurchase() {
+  //var total = 0;
+  //var requestQuantity = answer.stock_quantity;
+  //var id = answer.choice;
+
+
+      // Calculate Total
+      //total = total + (answer.stock_quantity * results.price);
+      //console.log("Purchase complete! Total purchase price: " + total);
     }
-    connection.end();
-  });
+  )
 }
+*/
+
+
+
+//managePurchase
+/*function managePurchase() {
+  //var total = 0;
+  //var requestQuantity = answer.stock_quantity;
+  //var id = answer.choice;
+
+
+      // Calculate Total
+      //total = total + (answer.stock_quantity * results.price);
+      //console.log("Purchase complete! Total purchase price: " + total);
+    }
+  )
+}
+*/
+

@@ -145,7 +145,7 @@ function bidAuction() {
               if (error) throw err;
               console.log("Bid placed successfully!");
               start();
-            }
+            }---------------------------------------------------------------
           );
         }
         else {
